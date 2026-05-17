@@ -1,5 +1,3 @@
-import { kv } from '@vercel/kv';
-
 const VALID_CODES = [
   "08NU","G0Z4","93CD","0WK7","9GG4","4CX4","OI92","F23H","N10Q","4PX0",
   "CS31","GW43","9E1X","SC62","8MP2","N8G8","WA19","8ZC0","76GM","RO89",
@@ -12,34 +10,42 @@ const VALID_CODES = [
   "E1S3","88OV","47MB","09FZ","C42P","D8M6","MW45","BZ31","53JP","52QC",
   "Y5W2","11VE","2OP9","2L6K","6U0E","EV04","4KS6","46MH","YB41","4B8S"
 ];
-
 const MAX_USES = 5;
 const ADMIN_SECRET = process.env.ADMIN_SECRET || 'luxand-admin-2026';
 
+async function redisGet(key) {
+  const url = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
+  const res = await fetch(`${url}/get/${key}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  return data.result;
+}
+
+async function redisSet(key, value) {
+  const url = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
+  await fetch(`${url}/set/${key}/${value}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-
-  // Проста авторизація через query param
   const { secret, code: resetCode, action } = req.query;
-  if (secret !== ADMIN_SECRET) {
-    return res.status(401).json({ error: 'unauthorized' });
-  }
+  if (secret !== ADMIN_SECRET) return res.status(401).json({ error: 'unauthorized' });
 
-  // Скинути конкретний код
   if (action === 'reset' && resetCode) {
-    await kv.set(`code:${resetCode.toUpperCase()}`, 0);
-    return res.status(200).json({ ok: true, message: `Code ${resetCode} reset to 0` });
+    await redisSet(`code:${resetCode.toUpperCase()}`, 0);
+    return res.status(200).json({ ok: true, message: `Code ${resetCode} reset` });
   }
 
-  // Показати статистику всіх кодів
-  const keys = VALID_CODES.map(c => `code:${c}`);
-  const values = await kv.mget(...keys);
-
-  const stats = VALID_CODES.map((code, i) => ({
-    code,
-    uses: Number(values[i] || 0),
-    remaining: Math.max(0, MAX_USES - Number(values[i] || 0)),
-    blocked: Number(values[i] || 0) >= MAX_USES
+  const stats = await Promise.all(VALID_CODES.map(async code => {
+    const val = await redisGet(`code:${code}`);
+    const uses = Number(val || 0);
+    return { code, uses, remaining: Math.max(0, MAX_USES - uses), blocked: uses >= MAX_USES };
   }));
 
   const summary = {
