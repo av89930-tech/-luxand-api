@@ -1,8 +1,5 @@
-import { kv } from '@vercel/kv';
-
 const MAX_USES = 5;
 
-// Всі дійсні коди
 const VALID_CODES = new Set([
   "08NU","G0Z4","93CD","0WK7","9GG4","4CX4","OI92","F23H","N10Q","4PX0",
   "CS31","GW43","9E1X","SC62","8MP2","N8G8","WA19","8ZC0","76GM","RO89",
@@ -16,8 +13,18 @@ const VALID_CODES = new Set([
   "Y5W2","11VE","2OP9","2L6K","6U0E","EV04","4KS6","46MH","YB41","4B8S"
 ]);
 
+async function redisIncr(key) {
+  const url = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
+  const res = await fetch(`${url}/incr/${key}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+  return data.result;
+}
+
 export default async function handler(req, res) {
-  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -29,19 +36,14 @@ export default async function handler(req, res) {
 
   const normalized = String(code).trim().toUpperCase();
 
-  // Перевірка чи код існує
   if (!VALID_CODES.has(normalized)) {
     return res.status(200).json({ ok: false, reason: 'invalid' });
   }
 
-  const key = `code:${normalized}`;
-
   try {
-    // Атомарно збільшуємо лічильник
-    const count = await kv.incr(key);
+    const count = await redisIncr(`code:${normalized}`);
 
     if (count > MAX_USES) {
-      // Перевищено ліміт — блокуємо
       return res.status(200).json({
         ok: false,
         reason: 'used_up',
@@ -57,7 +59,7 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error('KV error:', err);
+    console.error('Redis error:', err);
     return res.status(500).json({ ok: false, reason: 'server_error' });
   }
 }
