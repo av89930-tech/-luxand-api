@@ -11,7 +11,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const model = 'gemini-2.0-flash-exp';
+    const model = 'gemini-2.5-flash-image';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
     
     console.log('Forwarding to Gemini, body keys:', Object.keys(req.body || {}));
