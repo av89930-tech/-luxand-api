@@ -12,24 +12,24 @@ export default async function handler(req, res) {
   }
 
   try {
-    const model = 'gemini-1.5-flash';
+    const model = 'gemini-2.5-flash-image';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
-
-    console.log('Forwarding to Gemini, parts count:', req.body?.contents?.[0]?.parts?.length);
 
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(req.body)
+      body: JSON.stringify({
+        ...req.body,
+        generationConfig: {
+          responseModalities: ['IMAGE', 'TEXT']
+        }
+      })
     });
 
     const data = await response.json();
     console.log('Gemini status:', response.status);
-    
-    if (!response.ok) {
-      console.error('Gemini error:', JSON.stringify(data));
-    }
-    
+    if (!response.ok) console.error('Gemini error:', JSON.stringify(data));
+
     return res.status(response.status).json(data);
   } catch (err) {
     console.error('Generate error:', err);
