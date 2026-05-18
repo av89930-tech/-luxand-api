@@ -6,6 +6,8 @@
   },
   "rewrites": [
     { "source": "/api/telegram", "destination": "/api/telegram.js" },
-    { "source": "/api/generate", "destination": "/api/generate.js" }
+    { "source": "/api/generate", "destination": "/api/generate.js" },
+    { "source": "/api/describe", "destination": "/api/describe.js" },
+    { "source": "/api/visualize", "destination": "/api/visualize.js" }
   ]
 }
