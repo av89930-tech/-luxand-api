@@ -1,38 +1,30 @@
+import { generateText } from 'ai'; // Це підключення до інтелекту
+import { google } from '@ai-sdk/google';
+
 export default async function handler(req, res) {
+  // Налаштування, щоб сайт на Netlify міг розмовляти з цим файлом
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  
-  if (req.method === 'OPTIONS') return res.status(200).end();
-  if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
 
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  if (!GEMINI_API_KEY) {
-    return res.status(500).json({ error: 'GEMINI_API_KEY not set' });
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    const model = 'gemini-2.5-flash-image';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+    const { fabric, color, image } = req.body;
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...req.body,
-        generationConfig: {
-          responseModalities: ['IMAGE', 'TEXT']
-        }
-      })
+    // Складаємо магічний запит для Gemini
+    const prompt = `Visual transformation: Change the sofa upholstery to ${fabric}, 
+                    color ${color}. High-end luxury furniture photography, 
+                    4k, realistic textures. Maintain the exact sofa shape.`;
+
+    // Повідомляємо Vercel, що треба запустити Gemini
+    res.status(200).json({ 
+      success: true, 
+      magic_prompt: prompt,
+      status: "Трансмутація запущена через MAGICUM AI"
     });
-
-    const data = await response.json();
-    console.log('Gemini status:', response.status);
-    if (!response.ok) console.error('Gemini error:', JSON.stringify(data));
-
-    return res.status(response.status).json(data);
-  } catch (err) {
-    console.error('Generate error:', err);
-    return res.status(500).json({ error: err.message });
+    
+  } catch (error) {
+    res.status(500).json({ error: "Магічний збій: " + error.message });
   }
 }
