@@ -69,5 +69,3 @@ Generate the photorealistic image, then in Ukrainian write 2-3 sentences describ
     return res.status(500).json({ error: err.message });
   }
 }
-  }
-}
